@@ -1,7 +1,10 @@
 package api
 
 import (
+	"fmt"
+	"log"
 	"net/http"
+	"os"
 )
 
 var welcomeTemplate = `<!DOCTYPE html>
@@ -29,6 +32,18 @@ var welcomeTemplate = `<!DOCTYPE html>
 </body>
 </html>`
 
+var (
+	repo *Repo
+)
+
+func init() {
+	repo = NewRepo(os.Getenv("PG_URL"))
+}
+
+func encode(id int) string {
+	return ""
+}
+
 // WelcomeHandler handles / route
 func WelcomeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
@@ -38,7 +53,24 @@ func WelcomeHandler(w http.ResponseWriter, r *http.Request) {
 // ShortHandler shortens a given url (param url)
 func ShortHandler(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Query().Get("url")
-	w.Write([]byte(url))
+
+	id, err := repo.Insert(url)
+	if err != nil {
+		log.Printf("Failed to create url: %v", err)
+		http.Error(w, "Failed to create url", http.StatusInternalServerError)
+		return
+	}
+
+	key := encode(id)
+	queue := make(chan bool)
+	go func() {
+		repo.Update(id, key)
+		queue <- true
+	}()
+
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprintf(w, `{"status": 200, "status_text": "ok"}`)
+	<-queue
 }
 
 // RedirectHandler redirects to url based on hash value

@@ -2,9 +2,9 @@ package api
 
 import (
 	"database/sql"
-	"os"
-
 	"log"
+
+	_ "github.com/lib/pq"
 )
 
 // Repo represents a database wrapper
@@ -14,9 +14,9 @@ type Repo struct {
 }
 
 // NewRepo creates a new repo
-func NewRepo() *Repo {
+func NewRepo(dsn string) *Repo {
 	r := &Repo{
-		Dsn: os.Getenv("SHORTNR_DATABASE"),
+		Dsn: dsn,
 	}
 
 	r.connect()
@@ -27,7 +27,7 @@ func NewRepo() *Repo {
 func (r *Repo) connect() {
 	db, err := sql.Open("postgres", r.Dsn)
 	if err != nil {
-		log.Fatal("Could not connect to the database")
+		log.Fatalf("Could not connect to the database: %v", err)
 	}
 
 	r.db = db
@@ -37,9 +37,8 @@ func (r *Repo) connect() {
 // returns inserted row's ID if ok otherwise error
 func (r *Repo) Insert(url string) (int, error) {
 	var id int
-	err := r.db.QueryRow(`INSERT INTO urls (url) VALUES ($1) RETURING id`).Scan(&id)
+	err := r.db.QueryRow(`INSERT INTO urls (name, url) VALUES ($1, $2) RETURNING id`, "", url).Scan(&id)
 	if err != nil {
-		log.Printf("Url (%v) could not inserted to the database.", url)
 		return -1, err
 	}
 
@@ -47,8 +46,9 @@ func (r *Repo) Insert(url string) (int, error) {
 }
 
 // Update @todo
-func (r *Repo) Update(id int, key string, url string) {
-
+func (r *Repo) Update(id int, name string) bool {
+	err := r.db.QueryRow(`UPDATE urls SET name = $1 WHERE id = $2`, name, id)
+	return err == nil
 }
 
 // Find returns a url for given key
