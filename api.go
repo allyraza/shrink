@@ -1,10 +1,16 @@
 package api
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+)
+
+const (
+	URL_LENGTH = 4
 )
 
 var welcomeTemplate = `<!DOCTYPE html>
@@ -40,8 +46,15 @@ func init() {
 	repo = NewRepo(os.Getenv("PG_URL"))
 }
 
-func encode(id int) string {
-	return ""
+func GenerateRandomStr(n int) (string, error) {
+	bytes := make([]byte, n)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+
+	return hex.EncodeToString(bytes), nil
 }
 
 // WelcomeHandler handles / route
@@ -61,7 +74,7 @@ func ShortHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key := encode(id)
+	key, _ := GenerateRandomStr(URL_LENGTH)
 	queue := make(chan bool)
 	go func() {
 		repo.Update(id, key)
@@ -69,7 +82,7 @@ func ShortHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, `{"status": 200, "status_text": "ok"}`)
+	fmt.Fprintf(w, `{"status": 200, "status_text": "ok", "short_url": %s}`, key)
 	<-queue
 }
 
