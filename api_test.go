@@ -35,7 +35,21 @@ func Test_ShortHandler(t *testing.T) {
 
 	m.ServeHTTP(w, r)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected %v, Got %v", http.StatusOK, w.Code)
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected %v, Got %v", http.StatusCreated, w.Code)
+	}
+}
+
+func Test_RedirectHandler(t *testing.T) {
+	m := New()
+	w := httptest.NewRecorder()
+	data := url.Values{"key": {"foo"}}
+	r, _ := http.NewRequest("GET", "/r", nil)
+	r.URL.RawQuery = data.Encode()
+
+	m.ServeHTTP(w, r)
+
+	if w.Code != http.StatusTemporaryRedirect {
+		t.Errorf("Expected %v, Got %v", http.StatusTemporaryRedirect, w.Code)
 	}
 }

@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	URL_LENGTH = 4
+	LENGTH = 4
 )
 
 var welcomeTemplate = `<!DOCTYPE html>
@@ -50,7 +50,6 @@ func GenerateRandomStr(n int) (string, error) {
 	bytes := make([]byte, n)
 	_, err := rand.Read(bytes)
 	if err != nil {
-		fmt.Println(err)
 		return "", err
 	}
 
@@ -74,7 +73,11 @@ func ShortHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key, _ := GenerateRandomStr(URL_LENGTH)
+	key, err := GenerateRandomStr(LENGTH)
+	if err != nil {
+		log.Println(err)
+	}
+
 	queue := make(chan bool)
 	go func() {
 		repo.Update(id, key)
